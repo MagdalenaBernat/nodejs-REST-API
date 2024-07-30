@@ -1,6 +1,6 @@
 const express = require('express')
 const router = express.Router()
-const Joi = require('joi');
+const Joi = require('@hapi/joi');
 
 const {
   listContacts,
