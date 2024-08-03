@@ -3,6 +3,11 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Joi = require('joi');
 const User = require('../models/user');
+const gravatar = require('gravatar');
+const path = require('path');
+const fs = require('fs/promises');
+const jimp = require('jimp');
+const upload = require('../middleware/upload');
 
 const router = express.Router();
 
@@ -30,6 +35,7 @@ router.post('/signup', async (req, res) => {
     const user = new User({
       email,
       password: hashedPassword,
+      avatarURL,
     });
 
     await user.save();
@@ -38,6 +44,7 @@ router.post('/signup', async (req, res) => {
       user: {
         email: user.email,
         subscription: user.subscription,
+        avatarURL: user.avatarURL,
       }
     });
   } catch (error) {
@@ -105,6 +112,28 @@ router.get('/current', auth, async (req, res) => {
       email: user.email,
       subscription: user.subscription,
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// avatar
+router.patch('/avatars', auth, upload.single('avatar'), async (req, res) => {
+  try {
+    const { path: tempPath, originalname } = req.file;
+    const ext = path.extname(originalname);
+    const newFileName = `${req.user._id}${ext}`;
+    const newFilePath = path.join(__dirname, '../public/avatars', newFileName);
+
+    const image = await jimp.read(tempPath);
+    await image.resize(250, 250).writeAsync(newFilePath);
+    await fs.unlink(tempPath);
+
+    const avatarURL = `/avatars/${newFileName}`;
+    req.user.avatarURL = avatarURL;
+    await req.user.save();
+
+    res.status(200).json({ avatarURL });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -20,3 +20,6 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+const path = require('path');
+app.use('/avatars', express.static(path.join(__dirname, 'public/avatars')));
