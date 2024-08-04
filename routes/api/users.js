@@ -25,8 +25,6 @@ router.get('/verify/:verificationToken', async (req, res) => {
   }
 });
 
-module.exports = router;
-
 //
 
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -95,6 +93,10 @@ router.post('/verify', async (req, res) => {
       return res.status(400).json({ message: 'Verification has already been passed' });
     }
 
+    if (!user.verify) {
+      return res.status(401).json({ message: 'Verification failed' });
+    }
+
     const msg = {
       to: email,
       from: process.env.SENDER_EMAIL,
@@ -110,3 +112,5 @@ router.post('/verify', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+module.exports = router;
