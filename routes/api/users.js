@@ -5,6 +5,9 @@ const bcrypt = require('bcryptjs');
 const gravatar = require('gravatar');
 const { v4: uuidv4 } = require('uuid');
 const sgMail = require('@sendgrid/mail');
+const jwt = require('jsonwebtoken');
+
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.get('/verify/:verificationToken', async (req, res) => {
   try {
@@ -26,8 +29,6 @@ router.get('/verify/:verificationToken', async (req, res) => {
 });
 
 //
-
-sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 router.post('/signup', async (req, res) => {
   try {
@@ -112,5 +113,40 @@ router.post('/verify', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+
+// logowanie
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ message: 'Invalid email or password' });
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+
+    if (!isPasswordValid) {
+      return res.status(404).json({ message: 'Invalid email or password' });
+    }
+
+    if (!user.verify) {
+      return res.status(401).json({ message: 'Please verify your email first' });
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.status(200).json({ token, userId: user._id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 module.exports = router;
